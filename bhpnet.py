@@ -5,14 +5,16 @@ import socket
 import getopt
 import threading
 import subprocess
+import traceback
 
-listen      = False
-command     = False
-upload      = False
-execute     = ""
-target      = ""
+listen = False
+command = False
+upload = False
+execute = ""
+target = ""
 upload_dest = ""
-port        = 0
+port = 0
+
 
 def usage():
     print "BHP Net Tool"
@@ -31,14 +33,15 @@ def usage():
     print "echo 'ABCDEFGHI' | ./bhpnet.py -t 192.168.11.12 -p 135"
     sys.exit(0)
 
-def client_sender(buffer):
-    client = socket.socket((target, port))
+
+def client_sender(buff):
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     try:
         client.connect((target, port))
 
-        if (len(buffer)):
-            client.send(buffer)
+        if len(buff):
+            client.send(buff)
 
         while True:
             recv_len = 1
@@ -54,15 +57,16 @@ def client_sender(buffer):
 
             print response,
 
-            buffer = raw_input("")
-            buffer += "\n"
+            buff = raw_input('')
+            buff += "\n\n"
 
-            client.send(buffer)
+            client.send(buff)
 
     except:
-        print "[*] Exception occured. Exiting..."
-
+        print "[*] Exception occurred. Exiting..."
+        traceback.print_exc()
         client.close()
+
 
 def client_handler(client_socket):
     global upload
@@ -91,7 +95,6 @@ def client_handler(client_socket):
             client_socket.send("Error saving file in %s\r\n" % upload_dest)
 
     if len(execute):
-
         output = run_command(execute)
 
         client_socket.send(output)
@@ -127,16 +130,16 @@ def server_loop():
         client_thread = threading.Thread(target=client_handler, args=(client_socket,))
         client_thread.start()
 
+
 def run_command(command):
     command = command.rstrip()
 
     try:
-        output = subprocess.check_output(command, stderr=subprocess.STDOUT, shell = True)
+        output = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True)
     except:
         output = "Unable to run command.\r\n"
 
     return output
-
 
 
 def main():
@@ -151,7 +154,7 @@ def main():
         usage()
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"hle:t:p:cu",
+        opts, args = getopt.getopt(sys.argv[1:], "hle:t:p:cu",
                                    ["help", "listen", "execute", "target", "port", "command", "upload"])
     except getopt.GetoptError as err:
         print str(err)
@@ -176,14 +179,11 @@ def main():
             assert False, "Not valid operation"
 
     if not listen and len(target) and port > 0:
-        buffer = sys.stdin.read()
-        client_sender(buffer)
+        data = sys.stdin.read()
+        client_sender(data)
 
     if listen:
         server_loop()
 
+
 main()
-
-
-
-
